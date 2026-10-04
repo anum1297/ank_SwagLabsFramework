@@ -100,7 +100,12 @@ public class ListenerConfig extends TestBase implements ITestListener {
 		System.out.println("Extent report generated: " + reportFile.getAbsolutePath());
 
 		if (Boolean.parseBoolean(System.getProperty("sendReportEmail", "true"))) {
-			EmailGeneration.sendReportEmail();
+			try {
+				EmailGeneration.sendReportEmail();
+			} catch (IllegalStateException e) {
+				System.err.println("Report email delivery failed; test results and Extent report are preserved.");
+				e.printStackTrace(System.err);
+			}
 		}
 	}
 }
