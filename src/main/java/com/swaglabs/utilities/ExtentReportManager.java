@@ -1,5 +1,9 @@
 package com.swaglabs.utilities;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 import com.aventstack.extentreports.AnalysisStrategy;
 import com.aventstack.extentreports.ExtentReports;
 import com.aventstack.extentreports.reporter.ExtentSparkReporter;
@@ -18,10 +22,13 @@ public class ExtentReportManager {
 
 	private static ExtentReports createInstance() {
 
-		// Generate timestamp for unique report file
 		String reportPath = ReportConstants.REPORT_PATH;
+		try {
+			Files.createDirectories(Path.of(reportPath).getParent());
+		} catch (IOException e) {
+			throw new IllegalStateException("Unable to create the Extent report directory", e);
+		}
 
-		// Spark reporter setup
 		ExtentSparkReporter sparkReporter = new ExtentSparkReporter(reportPath);
 		sparkReporter.config().setReportName("SwagLabs Automation Test Report");
 		sparkReporter.config().setDocumentTitle("Execution Report");

@@ -1,30 +1,46 @@
 package com.swaglabs.utilities;
 
-import jakarta.mail.*;
-import jakarta.mail.internet.*;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.util.List;
 import java.util.Properties;
-import com.swaglabs.helpers.TestData_Reader;
-import static com.swaglabs.driver.ListenerConfig.*; // Import test counters
-import static com.swaglabs.utilities.ReportConstants.*; // For report path
+
+import jakarta.mail.Authenticator;
+import jakarta.mail.Message;
+import jakarta.mail.Multipart;
+import jakarta.mail.PasswordAuthentication;
+import jakarta.mail.Session;
+import jakarta.mail.Transport;
+import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.internet.MimeBodyPart;
+import jakarta.mail.internet.MimeMessage;
+import jakarta.mail.internet.MimeMultipart;
+
+import static com.swaglabs.driver.ListenerConfig.failedTestNames;
+import static com.swaglabs.driver.ListenerConfig.failedTests;
+import static com.swaglabs.driver.ListenerConfig.passedTestNames;
+import static com.swaglabs.driver.ListenerConfig.passedTests;
+import static com.swaglabs.driver.ListenerConfig.skippedTestNames;
+import static com.swaglabs.driver.ListenerConfig.skippedTests;
+import static com.swaglabs.utilities.ReportConstants.REPORT_PATH;
 
 public class EmailGeneration {
 
- public static void sendReportEmail() {
-        TestData_Reader reader = new TestData_Reader();
-        String from = reader.getProperty("mailFrom");
-        String to = reader.getProperty("mailTo");
-        String appPassword = reader.getProperty("appPassword");
+    public static void sendReportEmail() {
+        String from = requireEnvironmentVariable("SWAGLABS_MAIL_FROM");
+        String to = requireEnvironmentVariable("SWAGLABS_MAIL_TO");
+        String appPassword = requireEnvironmentVariable("SWAGLABS_MAIL_APP_PASSWORD");
 
         Properties props = new Properties();
         props.put("mail.smtp.auth", "true");
         props.put("mail.smtp.starttls.enable", "true");
         props.put("mail.smtp.host", "smtp.gmail.com");
         props.put("mail.smtp.port", "587");
+        props.put("mail.smtp.connectiontimeout", "10000");
+        props.put("mail.smtp.timeout", "10000");
+        props.put("mail.smtp.writetimeout", "10000");
 
         Session session = Session.getInstance(props, new Authenticator() {
+            @Override
             protected PasswordAuthentication getPasswordAuthentication() {
                 return new PasswordAuthentication(from, appPassword);
             }
@@ -65,10 +81,11 @@ public class EmailGeneration {
 
             MimeBodyPart attachmentPart = new MimeBodyPart();
             File reportFile = new File(REPORT_PATH);
-            if (!reportFile.exists()) {
-                throw new FileNotFoundException("Report file not found at: " + REPORT_PATH);
+            if (!reportFile.isFile() || reportFile.length() == 0) {
+                throw new IllegalStateException("Extent report is missing or empty: " + reportFile.getAbsolutePath());
             }
             attachmentPart.attachFile(reportFile);
+            attachmentPart.setFileName(reportFile.getName());
 
             Multipart multipart = new MimeMultipart();
             multipart.addBodyPart(messageBodyPart);
@@ -76,21 +93,34 @@ public class EmailGeneration {
 
             message.setContent(multipart);
             Transport.send(message);
-            System.out.println("✅ Email sent successfully with summary and report.");
+            System.out.println("Test report email sent to " + to);
 
         } catch (Exception e) {
-            System.err.println("❌ Failed to send email:");
-            e.printStackTrace();
+            throw new IllegalStateException("Unable to send the Extent report email", e);
         }
+    }
+
+    private static String requireEnvironmentVariable(String name) {
+        String value = System.getenv(name);
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException(
+                    "Email reporting is enabled, but the " + name + " environment variable is not set");
+        }
+        return value;
     }
 
     private static String buildHtmlList(List<String> testNames) {
         if (testNames.isEmpty()) return "<i>None</i>";
         StringBuilder builder = new StringBuilder("<ul>");
         for (String name : testNames) {
-            builder.append("<li>").append(name).append("</li>");
+            builder.append("<li>").append(escapeHtml(name)).append("</li>");
         }
         builder.append("</ul>");
         return builder.toString();
+    }
+
+    private static String escapeHtml(String value) {
+        return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                .replace("\"", "&quot;").replace("'", "&#39;");
     }
 }

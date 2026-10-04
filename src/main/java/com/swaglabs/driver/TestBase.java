@@ -48,8 +48,7 @@ public class TestBase {
 
 			// Check if headless mode is enabled
 			if (browserName.contains("headless")) {
-				opt.addArguments("headless"); // Run Chrome in headless mode (no GUI)
-				WebDriverManager.chromedriver().setup();
+				opt.addArguments("--headless=new"); // Run Chrome in headless mode (no GUI)
 			}
 
 			driver = new ChromeDriver(opt); // Initialize ChromeDriver with options

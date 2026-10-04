@@ -13,6 +13,7 @@ import com.aventstack.extentreports.ExtentTest;
 import com.aventstack.extentreports.Status;
 import com.swaglabs.utilities.EmailGeneration;
 import com.swaglabs.utilities.ExtentReportManager;
+import com.swaglabs.utilities.ReportConstants;
 
 public class ListenerConfig extends TestBase implements ITestListener {
 	
@@ -92,6 +93,14 @@ public class ListenerConfig extends TestBase implements ITestListener {
 	@Override
 	public void onFinish(ITestContext context) {
 		extent.flush();
-		EmailGeneration.sendReportEmail();
+		java.io.File reportFile = new java.io.File(ReportConstants.REPORT_PATH);
+		if (!reportFile.isFile() || reportFile.length() == 0) {
+			throw new IllegalStateException("Extent report was not generated: " + reportFile.getAbsolutePath());
+		}
+		System.out.println("Extent report generated: " + reportFile.getAbsolutePath());
+
+		if (Boolean.parseBoolean(System.getProperty("sendReportEmail", "true"))) {
+			EmailGeneration.sendReportEmail();
+		}
 	}
 }

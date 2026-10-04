@@ -1,7 +1,8 @@
 package com.swaglabs.helpers;
 
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Properties;
 
 public class TestData_Reader {
@@ -12,16 +13,11 @@ public class TestData_Reader {
 	// Constructor to initialize ConfigReader and load properties file
 	public TestData_Reader() {
 		properties = new Properties();
-		try {
-
-			// Load the properties file from the specified path
-			FileInputStream fis = new FileInputStream("src\\main\\java\\com\\swaglabs\\utilities\\TestData.properties");
-			properties.load(fis); // Load properties from the input stream
+		try (var input = Files.newInputStream(
+				Path.of("src", "main", "java", "com", "swaglabs", "utilities", "TestData.properties"))) {
+			properties.load(input);
 		} catch (IOException e) {
-			e.printStackTrace();
-
-			// Throw a runtime exception if properties file loading fails
-			throw new RuntimeException("Unable to load properties file: " + e.getMessage());
+			throw new RuntimeException("Unable to load properties file", e);
 		}
 	}
 

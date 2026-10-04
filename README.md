@@ -122,13 +122,39 @@ mvn test -Dbrowser=chrome -Denv=qa
 ## 📊 Reporting
 
 - HTML report generated using **ExtentReports**
-- After execution, go to:
+- After execution, the timestamped report is saved to:
 
 ```
-/reports/ExtentReport.html
+reports/TestReport_<timestamp>.html
 ```
 
-Open in a browser to view test results with status, screenshots (if implemented), and logs.
+Open it in a browser to view test results, screenshots, and logs. The report is written before email delivery is attempted.
+
+Email delivery is enabled by default. For Gmail, enable 2-Step Verification on the sender account and create a Google **App Password**. Use that app password—not your normal Gmail password.
+
+On Linux or macOS, set the sender, recipient, and app password in the same terminal before running:
+
+```bash
+export SWAGLABS_MAIL_FROM="sender@gmail.com"
+export SWAGLABS_MAIL_TO="recipient@example.com"
+export SWAGLABS_MAIL_APP_PASSWORD="your-gmail-app-password"
+mvn test
+```
+
+On Windows PowerShell:
+
+```powershell
+$env:SWAGLABS_MAIL_FROM = "sender@gmail.com"
+$env:SWAGLABS_MAIL_TO = "recipient@example.com"
+$env:SWAGLABS_MAIL_APP_PASSWORD = "your-gmail-app-password"
+mvn test
+```
+
+Keep these values out of source control. To generate the report without sending email, run:
+
+```bash
+mvn -DsendReportEmail=false test
+```
 
 <img width="1919" height="876" alt="Screenshot 2025-07-26 200246" src="https://github.com/user-attachments/assets/0277ecbf-9b49-461d-9597-8577772cc317" />
 <img width="1920" height="847" alt="image" src="https://github.com/user-attachments/assets/951e56b3-267f-47ff-b180-c0f5463e8fa9" />
@@ -142,73 +168,20 @@ Open in a browser to view test results with status, screenshots (if implemented)
 
 ### ✅ Jenkins Integration
 
-- Jenkins job configured to:
-  - Pull latest code from GitHub
-  - Accept parameters (browser, env)
-  - Execute Maven tests
-  - Publish Extent Report as post-build step
-
-#### Sample Build Command in Jenkins:
-
-```bash
-mvn clean test -Dbrowser=chrome -Denv=qa
-```
-
-#### Jenkins Pipeline Example (`Jenkinsfile`)
-
-```groovy
-pipeline {
-    agent any
-
-    tools {
-        maven 'Maven 3.8.6'
-        jdk 'Java 11'
-    }
-
-    parameters {
-        string(name: 'browser', defaultValue: 'chrome', description: 'Browser to test')
-        string(name: 'env', defaultValue: 'qa', description: 'Environment')
-    }
-
-    stages {
-        stage('Checkout') {
-            steps {
-                git 'https://github.com/anum1297/ank_SwagLabsAutomation.git'
-            }
-        }
-        stage('Build and Test') {
-            steps {
-                sh "mvn clean test -Dbrowser=${params.browser} -Denv=${params.env}"
-            }
-        }
-        stage('Archive Report') {
-            steps {
-                archiveArtifacts artifacts: 'reports/ExtentReport.html', fingerprint: true
-            }
-        }
-    }
-}
-```
+- The repository [Jenkinsfile](./Jenkinsfile) runs the suite headlessly, emails the report, archives that build's timestamped report, and publishes the Surefire test results.
+- Configure the Jenkins agent with **JDK 17**, **Maven**, **Google Chrome**, and outbound network access for Maven/driver downloads and Gmail SMTP (port 587).
+- Ensure Jenkins has the **Pipeline** and **Credentials Binding** plugins.
+- In **Manage Jenkins → Credentials**, add:
+  - A **Username with password** credential with ID `swaglabs-gmail-smtp`. Set the username to the Gmail sender address and the password to that account's Google App Password.
+  - A **Secret text** credential with ID `swaglabs-report-recipient`. Set the secret to the destination email address.
+- Create a **Pipeline** job configured as **Pipeline script from SCM**, point it to this repository, and set the script path to `Jenkinsfile`. Run the job with **SEND_REPORT_EMAIL** enabled.
+- To run Jenkins without email, uncheck **SEND_REPORT_EMAIL**; the report and test results will still be archived.
 
 ---
 
 ## 📧 Email Report Integration
 
-Email Sending Features:
-
-Sends test result summary after build
-
-Includes:
-
-Total passed/failed/skipped
-
-Attached ExtentReport
-
-Configuration:
-
-SMTP details configured in a MailUtility.java class
-
-Triggered in ITestListener after suite completes
+The TestNG listener sends a summary of passed, failed, and skipped tests and attaches the generated Extent HTML report after the suite completes. The sender and app password are read from environment variables locally or bound from Jenkins credentials in CI.
 
 Open in your email to view test results with status:
 
@@ -246,4 +219,3 @@ We encourage developers and QA engineers to contribute, suggest improvements, an
 ---
 
 Thank you for checking out this project! ⭐️
-
