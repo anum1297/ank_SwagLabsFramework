@@ -168,8 +168,30 @@ mvn -DsendReportEmail=false test
 
 ### ✅ Jenkins Integration
 
-- The repository [Jenkinsfile](./Jenkinsfile) runs the suite headlessly, emails the report, archives that build's timestamped report, and publishes the Surefire test results.
+- The repository [Jenkinsfile](./Jenkinsfile) runs Chrome in headed mode, emails the report, archives that build's timestamped report, and publishes the Surefire test results.
 - Configure the Jenkins agent with **JDK 17**, **Maven**, **Google Chrome**, and outbound network access for Maven/driver downloads and Gmail SMTP (port 587).
+- Headed Chrome requires Jenkins to have access to a graphical desktop. On a Linux Mint machine running Jenkins as the `jenkins` service user, keep the desktop session logged in and allow that user to connect to the X display. For the current desktop user `aniket` and display `:0`, run this from a terminal inside the logged-in desktop session:
+
+  ```bash
+  xhost +SI:localuser:jenkins
+  sudo systemctl edit jenkins
+  ```
+
+  Add the following systemd override, using the desktop account's actual home path for `XAUTHORITY`:
+
+  ```ini
+  [Service]
+  Environment="DISPLAY=:0"
+  Environment="XAUTHORITY=/home/aniket/.Xauthority"
+  ```
+
+  Save and exit, then restart Jenkins:
+
+  ```bash
+  sudo systemctl restart jenkins
+  ```
+
+  The Jenkins agent running the job must be this same machine/display. If Jenkins starts without access to the desktop, Chrome cannot open a visible window; use a graphical Jenkins agent or switch the pipeline back to `chrome-headless`.
 - Ensure Jenkins has the **Pipeline** and **Credentials Binding** plugins.
 - In **Manage Jenkins → Credentials**, add:
   - A **Username with password** credential with ID `swaglabs-gmail-smtp`. Set the username to the Gmail sender address and the password to that account's Google App Password.

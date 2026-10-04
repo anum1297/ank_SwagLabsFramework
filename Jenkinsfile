@@ -38,7 +38,7 @@ pipeline {
                         ]) {
                             sh '''
                                 mvn -B clean test \
-                                  -Dbrowser=chrome-headless \
+                                  -Dbrowser=chrome \
                                   -DsendReportEmail=true \
                                   -DextentReportPath="reports/TestReport-${BUILD_NUMBER}.html"
                             '''
@@ -46,7 +46,7 @@ pipeline {
                     } else {
                         sh '''
                             mvn -B clean test \
-                              -Dbrowser=chrome-headless \
+                              -Dbrowser=chrome \
                               -DsendReportEmail=false \
                               -DextentReportPath="reports/TestReport-${BUILD_NUMBER}.html"
                         '''
